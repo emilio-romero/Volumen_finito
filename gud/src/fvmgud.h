@@ -11,7 +11,14 @@ int ConveccionTransitoriaImp1D(int nn, double **nnodos,double dt,int tmax, doubl
 
 int ConveccionTransitoria2D(int nn, double **nnodos,double dt,int tmax, double vx,double vy, 
     double *x0,double *y0,int(g0(int,double**)),double *Solucion);
-  int inicial(int n, double *u);
+int inicial(int n, double *u);
+int inicial2(int n, double *u);
 
 int inicio2d(int n, double **u);
+
+int ConveccionNolineal1D(int nn, double **nnodos, double dt, double tmax,
+    double u0, double(*f)(double), int(*g0)(int,double**,double*));
+
+double fburger(double u); 
+int g0burger(int n, double **nx, double *out);
 #endif 

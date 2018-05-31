@@ -46,31 +46,47 @@ int ConveccionTransitoria1D(int nn, double **nnodos,double dt,int tmax, double v
   double pc=v*dt/(8.0*dx);
   int limt=(int)((double)tmax/dt);
   g0(ni,u); 
-  A[0][0]=2.0; A[0][1]=3.0;
-  A[1][0]=-7.0; A[1][1]=3.0; A[1][2]=3.0;
-  for(int i=2;i<ni-1;++i){
-    A[i][i-2]=1.0; 
-    A[i][i-1]=-7.0; 
-    A[i][i]=3.0; 
-    A[i][i+1]=3.0;
-  }
-  A[ni-1][ni-1]=-2.0; A[ni-1][ni-2]=-6.0; A[ni-11][ni-3]=1.0;
-  
-
-  for(int m=0;m<limt;++m){
-    //printf("Tiempo: %lf\n",(double)(m+1)*dt);
-    u[0]=u[0]+pc*5.0*u0; 
-    u[1]=u[1]-pc*u0;
-    matriz_vector_mul(A,u,ni,ni,aux);
-    vector_escalar(-1.0*pc,aux,ni,aux);
-    vector_suma(u,aux,ni,up1);
-    printf("%lf %lf\n",nnodos[0][0],u0);
-    for(int i=0;i<ni;++i){
-      printf("%lf %lf\n",nnodos[i+1][0],up1[i]);
+  if(v>0){ 
+    A[0][0]=2.0; A[0][1]=3.0;
+    A[1][0]=-7.0; A[1][1]=3.0; A[1][2]=3.0;
+    for(int i=2;i<ni-1;++i){
+      A[i][i-2]=1.0; 
+      A[i][i-1]=-7.0; 
+      A[i][i]=3.0; 
+      A[i][i+1]=3.0;
     }
-    printf("\n\n");
-    vector_copiar(up1,ni,u);
+    A[ni-1][ni-1]=-2.0; A[ni-1][ni-2]=-6.0; A[ni-1][ni-3]=1.0;
+ 
+    for(int m=0;m<limt;++m){
+    //printf("Tiempo: %lf\n",(double)(m+1)*dt);
+      u[0]=u[0]+pc*5.0*u0; 
+      u[1]=u[1]-pc*u0;
+      matriz_vector_mul(A,u,ni,ni,aux);
+      vector_escalar(-1.0*pc,aux,ni,aux);
+      vector_suma(u,aux,ni,up1);
+      printf("%lf %lf\n",nnodos[0][0],u0);
+      for(int i=0;i<ni;++i){
+        printf("%lf %lf\n",nnodos[i+1][0],up1[i]);
+      }
+      printf("\n\n");
+      vector_copiar(up1,ni,u);
+    }
   }
+else{
+  for(int m=0;m<limt;++m){
+    u[0]=u[0]; 
+    for(int i=1;i<ni-2;++i){
+      u[i]=u[i]+pc*(3.0*u[i-1] + 3.0*u[i] -7.0*u[i+1] +u[i+2]);
+    }
+    u[ni-2]=u[ni-2]-pc*(u[ni-3]+6.0*u[ni-2]-7.0*u[ni-1]); 
+    u[ni-1]=u[ni-1]; 
+  for(int i=0;i<ni;++i){
+    printf("%lf %lf\n",nnodos[i][0],u[i]); 
+  }
+  printf("%lf %lf\n",nnodos[ni][0],u0);
+  printf("\n\n");
+  }
+}
   liberar_matriz(A,ni);
   free(u);
   free(up1);
@@ -132,9 +148,18 @@ int inicial(int n, double *u){
     if(i<nmedios)
       u[i]=0.0;
     else 
-      u[i]=5.0;
+      u[i]=1.0;
   }
+return(1);}
 
+int inicial2(int n, double *u){
+  int nmedios=n/2;
+  for(int i=0;i<n;++i){
+    if(i<nmedios)
+      u[i]=1.0;
+    else 
+      u[i]=0.0;
+  }
 return(1);}
 
 
@@ -196,7 +221,52 @@ int inicio2d(int n, double **u){
   double dmita=2*n/3; 
   for(int i=mita;i<dmita;++i){
     for(int j=mita;j<dmita;++j){
-      u[i][j]=15.0;
+      u[i][j]=5.0;
     }
+  }
+return(1);}
+
+/*
+ * Caso no lineal 1D de la ecuación de conveccion
+ *
+ */
+
+int ConveccionNolineal1D(int nn, double **nnodos, double dt, double tmax,
+    double u0, double(*f)(double),int(*g0)(int, double**, double*)){
+  int ni=nn-1; 
+  double *u=crear_vector(ni);
+  double uir, uil;  
+  double  dx=nnodos[1][0]-nnodos[0][0];
+  double pc=dt/dx;
+  int limt=(int)(tmax/dt);
+  
+  g0(ni,nnodos,u);
+  for(int m=0;m<limt;++m){
+    u[0]=u[0]-pc*(f((3.0*u[1]+6.0*u[0]-u0)/8.0)-f((2.0*u[1]+6.0*u0)/8.0)); 
+    u[1]=u[1]-pc*(f((3.0*u[2]+6.0*u[1]-u[0])/8.0)-f((3.0*u[1]+6.0*u[0]-u0)/8.0));
+    for(int i=2;i<ni-1;++i){
+      u[i]=u[i]-pc*(f((3.0*u[i+1]+6.0*u[i]-u[i-1])/8.0)-f((3.0*u[i]+6.0*u[i-1]-u[i-2])/8.0));  
+    }
+    u[ni-1]=u[ni-1]; 
+    
+    printf("%lf %lf\n",nnodos[0][0],u0);
+    for(int i=0;i<ni;++i){
+      printf("%lf %lf\n",nnodos[i+1][0],u[i]);
+    }
+    printf("\n\n");
+
+  } 
+  free(u);
+return 1;}
+
+double fburger(double u){
+  return(0.5*u*u);
+}
+
+int g0burger(int n, double **nx, double *out){
+ double rango=nx[n][0]-nx[0][0];
+ double mu=nx[0][0]+rango/4;
+  for(int i=0;i<n;i++){
+    out[i]=exp(-3.0*(nx[i+1][0]+2.0)*(nx[i+1][0]+2.0));
   }
 return(1);}
